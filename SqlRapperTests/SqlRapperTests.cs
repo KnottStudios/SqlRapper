@@ -179,7 +179,7 @@ namespace SqlRapperTests
             var success = true;
             //this really writes to the db.  So it is disabled.  
             /* */
-            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["Sql_Con_String"], new FileLogger());
             Random rand = new Random();
             var log = new Log()
             {
@@ -199,7 +199,7 @@ namespace SqlRapperTests
             var success = true;
             //this really writes to the db.  So it is disabled.  
             /* */
-            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["Sql_Con_String"], new FileLogger());
             Random rand = new Random();
             var log = new Log()
             {
@@ -218,7 +218,7 @@ namespace SqlRapperTests
             var success = true;
             //this really writes to the db.  So it is disabled.  
             /* */
-            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["Sql_Con_String"], new FileLogger());
             Random rand = new Random();
             var roll = rand.Next(0, 100);
             var log = new Log()
@@ -247,5 +247,30 @@ namespace SqlRapperTests
 
             Assert.IsTrue(success);
         }
+        [TestMethod]
+        public void UpdateThrowsExceptionWhenNoWhereandNoPrimaryKey()
+        {
+            var success = false;
+            //this really writes to the db.  So it is disabled.  
+            /* */
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["Sql_Con_String"], new FileLogger());
+            Random rand = new Random();
+            var log = new Log()
+            {
+                Message = "Test " + rand.Next(0, 100),
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
+            };
+            try
+            {
+                success = db.UpdateData(log);
+            }
+            catch
+            {
+                //funny false positive if no sql connection.
+                Assert.IsTrue(true);
+            }
+            Assert.IsFalse(success);
+        }
+
     }
 }
