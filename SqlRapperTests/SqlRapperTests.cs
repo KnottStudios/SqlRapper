@@ -156,7 +156,7 @@ namespace SqlRapperTests
         }
 
         [TestMethod]
-        public void CanCreateSqlStatementIgnoringCustomKeys()
+        public void CanCreateSqlStatementIgnoringOnlyCustomKeys()
         {
             var row = new Log();
             string returnedSql = "";

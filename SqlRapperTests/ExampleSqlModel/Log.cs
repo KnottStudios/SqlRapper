@@ -13,6 +13,7 @@ namespace SqlRapperTests.ExampleSqlModel
         public DateTime? Date { get; set; }
         public string Message { get; set; }
         public string StackTrace { get; set; }
+        [Required]//won't be removed
         public string ExceptionAsJson { get; set; }
     }
 }
