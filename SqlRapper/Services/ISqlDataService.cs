@@ -77,5 +77,19 @@ namespace SqlRapper.Services
         /// <param name="tableName"></param>
         /// <returns>bool success</returns>
         bool BulkInsertData<T>(List<T> rows, string tableName = null);
+
+        /// <summary>
+        /// This will not allow you to update a field with a primarykey attribute.
+        /// Ignores the defaultkey attribute. 
+        /// Creates a SqlCommand to update a row in a table using the class provided.
+        /// If no whereClause is given, the where clause becomes the primary key attribute.  
+        /// If no primary key and no where clause exists, throws an exception.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="row"></param>
+        /// <param name="whereClause"></param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
+        bool UpdateData<T>(T row, string whereClause = null, string tableName = null);
     }
 }

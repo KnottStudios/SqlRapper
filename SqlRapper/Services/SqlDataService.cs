@@ -321,9 +321,9 @@ namespace SqlRapper.Services
                                 dt.Columns.Add(new DataColumn(col.Name));
                             }
                             var attributes = GetAttributes(row, col);
-                            bool skip = SkipPrimaryKeys(attributes);
+                            bool skip = IsPrimaryKey(attributes);
                             var value = row.GetType().GetProperty(col.Name).GetValue(row);
-                            skip = skip ? skip : SkipNullDefaultKeys(attributes, value);
+                            skip = skip ? skip : IsNullDefaultKey(attributes, value);
                             if (skip)
                             {
                                 dt.Rows[rowNum][colNum] = DBNull.Value;
@@ -361,8 +361,85 @@ namespace SqlRapper.Services
             }
             return false;
         }
+
+        public bool UpdateData<T>(T row, string whereClause = null, string tableName = null)
+        {
+            string tn = tableName ?? row.GetType().Name + "s";
+            int inserted = 0;
+            using (SqlConnection con = new SqlConnection(ConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand())
+                {
+                    try
+                    {
+                        StringBuilder sb = GetUpdateableRows(row, tn, cmd, whereClause);
+                        cmd.CommandText = sb.ToString();
+                        cmd.Connection = con;
+                        cmd.CommandTimeout = CmdTimeOut;
+                        con.Open();
+                        inserted = cmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        if (con.State != ConnectionState.Closed)
+                        {
+                            con.Close();
+                        }
+                        //well logging to sql might not work... we could try... but could cause infinite loop if it fails.
+                        //So Lets write to a local file.
+                        _logger.Log("Failed to Write to Sql.", ex);
+                        throw ex;
+                    }
+                }
+            }
+            if (inserted > 0)
+            {
+                return true;
+            }
+            return false;
+        }
+
         #endregion
         #region Private methods
+        private static StringBuilder GetUpdateableRows<T>(T row, string table, SqlCommand cmd, string whereClause = null)
+        {
+            StringBuilder sb1 = new StringBuilder();
+            sb1.Append($"Update {table} Set ");
+            string primaryKey = "";
+            object primaryValue = "";
+            var columns = GetColumns(row);
+            foreach (var col in columns)
+            {
+                var attributes = GetAttributes(row, col);
+                var value = row.GetType().GetProperty(col.Name).GetValue(row);
+                if (IsPrimaryKey(attributes))
+                {
+                    primaryKey = col.Name;
+                    primaryValue = value;
+                    continue;
+                }
+                if (value != null)
+                {
+                    sb1.Append($"{col.Name} = @{col.Name},");
+                    cmd.Parameters.AddWithValue($"@{col.Name}", value);
+                }
+            }
+            sb1.Length--;
+            if (!string.IsNullOrWhiteSpace(whereClause))
+            {
+                sb1.Append($" {whereClause}");
+            }
+            else if (!string.IsNullOrWhiteSpace(primaryKey) && primaryValue != null)
+            {
+                sb1.Append($" WHERE {primaryKey} = @{primaryKey}");
+                cmd.Parameters.AddWithValue($"@{primaryKey}", primaryValue);
+            }
+            else
+            {
+                throw new Exception("A where clause was not able to be derived from the class due to no primary key and a where clause was not provided.");
+            }
+            return sb1;
+        }
         private static StringBuilder GetInsertableRows<T>(T row, string table, SqlCommand cmd)
         {
             StringBuilder sb1 = new StringBuilder();
@@ -373,9 +450,9 @@ namespace SqlRapper.Services
             foreach (var col in columns)
             {
                 var attributes = GetAttributes(row, col);
-                bool skip = SkipPrimaryKeys(attributes);
+                bool skip = IsPrimaryKey(attributes);
                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
-                skip = skip ? skip : SkipNullDefaultKeys(attributes, value);
+                skip = skip ? skip : IsNullDefaultKey(attributes, value);
                 if (skip)
                 {
                     continue;
@@ -403,7 +480,7 @@ namespace SqlRapper.Services
             return row.GetType().GetProperties();
         }
 
-        private static bool SkipPrimaryKeys(object[] attributes)
+        private static bool IsPrimaryKey(object[] attributes)
         {
             bool skip = false;
             foreach (var attr in attributes)
@@ -416,7 +493,7 @@ namespace SqlRapper.Services
 
             return skip;
         }
-        private static bool SkipNullDefaultKeys(object[] attributes, object value)
+        private static bool IsNullDefaultKey(object[] attributes, object value)
         {
             bool skip = false;
             foreach (var attr in attributes)

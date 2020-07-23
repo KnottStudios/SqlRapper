@@ -15,5 +15,6 @@ namespace SqlRapperTests.ExampleSqlModel
         public string StackTrace { get; set; }
         [Required]//won't be removed
         public string ExceptionAsJson { get; set; }
+        public string ExceptionMessage { get; set; }
     }
 }

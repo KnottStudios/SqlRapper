@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 
 namespace SqlRapperTests
@@ -140,12 +141,12 @@ namespace SqlRapperTests
             {
                 var attributes = (object[])PrivateMethod.InvokePrivateMethodWithReturnType(dbService, "GetAttributes", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance, new Type[] { typeof(Log) }, new object[] { row, col });
 
-                if ((bool)dbTester.InvokeStatic("SkipPrimaryKeys", new object[] { attributes }))
+                if ((bool)dbTester.InvokeStatic("IsPrimaryKey", new object[] { attributes }))
                 {
                     customCount++;
                 }
                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
-                if ((bool)dbTester.InvokeStatic("SkipNullDefaultKeys", new object[] { attributes, value }))
+                if ((bool)dbTester.InvokeStatic("IsNullDefaultKey", new object[] { attributes, value }))
                 {
                     customCount++;
                 }
@@ -172,5 +173,79 @@ namespace SqlRapperTests
             Assert.AreEqual(returnedSql, expectedSql);
         }
 
+        [TestMethod]
+        public void CanUpdateToSqlDb()
+        {
+            var success = true;
+            //this really writes to the db.  So it is disabled.  
+            /* */
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            Random rand = new Random();
+            var log = new Log()
+            {
+                LogId = 32,
+                Message = "Test " + rand.Next(0, 100),
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
+            };
+            success = db.UpdateData(log);
+
+            var newLog = db.GetData<Log>("Where Logid = 32");
+            Assert.AreEqual(newLog.FirstOrDefault().Message, log.Message);
+            Assert.IsTrue(success);
+        }
+        [TestMethod]
+        public void CanUpdateToSqlDbUsingWhereClause()
+        {
+            var success = true;
+            //this really writes to the db.  So it is disabled.  
+            /* */
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            Random rand = new Random();
+            var log = new Log()
+            {
+                Message = "Test " + rand.Next(0, 100),
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
+            };
+            success = db.UpdateData(log, "Where LogId = 32", "Logs");
+
+            var newLog = db.GetData<Log>("Where Logid = 32");
+            Assert.AreEqual(newLog.FirstOrDefault().Message, log.Message);
+            Assert.IsTrue(success);
+        }
+        [TestMethod]
+        public void DoesNotOverwriteSetFieldsWithUnspecifiedFields()
+        {
+            var success = true;
+            //this really writes to the db.  So it is disabled.  
+            /* */
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            Random rand = new Random();
+            var roll = rand.Next(0, 100);
+            var log = new Log()
+            {
+                LogId = 33,
+                Message = "Test " + roll,
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"]),
+                ExceptionMessage = "Test " + roll
+            };
+            db.UpdateData(log);
+
+            var roll2 = 101;
+            //exception is null, it won't set.
+            var log2 = new Log()
+            {
+                LogId = 33,
+                Message = "Test " + roll2,
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"]),
+            };
+            db.UpdateData(log2);
+
+
+            var newLog = db.GetData<Log>("Where Logid = 33");
+            Assert.AreEqual(newLog.FirstOrDefault().Message, log2.Message);
+            Assert.AreEqual(newLog.FirstOrDefault().ExceptionMessage, log.ExceptionMessage);
+
+            Assert.IsTrue(success);
+        }
     }
 }
