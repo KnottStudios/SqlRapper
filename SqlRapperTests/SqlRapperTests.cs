@@ -123,7 +123,7 @@ namespace SqlRapperTests
 
             PropertyInfo[] columns = (PropertyInfo[])getColumns.Invoke(typeof(Log), new object[] { new Log() });
 
-            Assert.IsTrue(columns.Length == 6);
+            Assert.IsTrue(columns.Length == 7);
         }
         [TestMethod]
         public void CanGetCustomAttributes()
@@ -168,7 +168,7 @@ namespace SqlRapperTests
                 var parameters = new object[] { row, tableName, cmd };
                 returnedSql = PrivateMethod.InvokePrivateMethodWithReturnType(new SqlDataService("fake", null), "GetInsertableRows", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance, types, parameters).ToString();
             }
-            string expectedSql = "INSERT INTO Logs (ApplicationId,Message,StackTrace,ExceptionAsJson) VALUES (@ApplicationId,@Message,@StackTrace,@ExceptionAsJson)";
+            string expectedSql = "INSERT INTO Logs (ApplicationId,Message,StackTrace,ExceptionAsJson,ExceptionMessage) VALUES (@ApplicationId,@Message,@StackTrace,@ExceptionAsJson,@ExceptionMessage)";
 
             Assert.AreEqual(returnedSql, expectedSql);
         }
@@ -264,9 +264,11 @@ namespace SqlRapperTests
             {
                 success = db.UpdateData(log);
             }
+            catch (SqlException e) {
+                Assert.IsTrue(false);
+            }
             catch
             {
-                //funny false positive if no sql connection.
                 Assert.IsTrue(true);
             }
             Assert.IsFalse(success);
