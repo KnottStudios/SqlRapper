@@ -17,7 +17,6 @@ C:\Users\deskt\source\repos\SqlRapper\SqlRapper\obj\Debug\netstandard2.0\SqlRapp
 C:\Repos\SqlRapper\SqlRapper\bin\Debug\netstandard2.0\SqlRapper.deps.json
 C:\Repos\SqlRapper\SqlRapper\bin\Debug\netstandard2.0\SqlRapper.dll
 C:\Repos\SqlRapper\SqlRapper\bin\Debug\netstandard2.0\SqlRapper.pdb
-C:\Repos\SqlRapper\SqlRapper\obj\Debug\netstandard2.0\SqlRapper.csprojAssemblyReference.cache
 C:\Repos\SqlRapper\SqlRapper\obj\Debug\netstandard2.0\SqlRapper.AssemblyInfoInputs.cache
 C:\Repos\SqlRapper\SqlRapper\obj\Debug\netstandard2.0\SqlRapper.AssemblyInfo.cs
 C:\Repos\SqlRapper\SqlRapper\obj\Debug\netstandard2.0\SqlRapper.csproj.CoreCompileInputs.cache

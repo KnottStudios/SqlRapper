@@ -98,14 +98,14 @@ namespace SqlRapperTests
             var logs = db.GetData<Log>();
             sw.Stop();
             
-            Assert.IsTrue(sw.ElapsedMilliseconds <= 2000);
+            Assert.IsTrue(sw.ElapsedMilliseconds <= 5000);
                        
             Stopwatch sw2 = new Stopwatch();
             sw2.Start();
             var condensedLogs = db.GetData<Log>("WHERE ApplicationId = 2", "Logs");
             sw2.Stop();
 
-            Assert.IsTrue(sw2.ElapsedMilliseconds <= 2000);
+            Assert.IsTrue(sw2.ElapsedMilliseconds <= 5000);
              
             Assert.IsTrue(success);
         }
@@ -122,7 +122,7 @@ namespace SqlRapperTests
 
             PropertyInfo[] columns = (PropertyInfo[])getColumns.Invoke(typeof(Log), new object[] { new Log() });
 
-            Assert.IsTrue(columns.Length == 4);
+            Assert.IsTrue(columns.Length == 6);
         }
         [TestMethod]
         public void CanGetCustomAttributes()
@@ -167,7 +167,7 @@ namespace SqlRapperTests
                 var parameters = new object[] { row, tableName, cmd };
                 returnedSql = PrivateMethod.InvokePrivateMethodWithReturnType(new SqlDataService("fake", null), "GetInsertableRows", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance, types, parameters).ToString();
             }
-            string expectedSql = "INSERT INTO Logs (Message,ApplicationId) VALUES (@Message,@ApplicationId)";
+            string expectedSql = "INSERT INTO Logs (ApplicationId,Message,StackTrace,ExceptionAsJson) VALUES (@ApplicationId,@Message,@StackTrace,@ExceptionAsJson)";
 
             Assert.AreEqual(returnedSql, expectedSql);
         }
