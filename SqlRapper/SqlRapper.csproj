@@ -2,6 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Patrick Knott</Authors>
+    <Company>Knott Studios</Company>
+    <PackageProjectUrl>https://github.com/KnottStudios/SqlRapper</PackageProjectUrl>
+    <Description>A lightweight ORM alternative that supports bulk inserts, bulk updates, and Sprocs</Description>
+    <Copyright>2020</Copyright>
+    <RepositoryUrl>https://github.com/KnottStudios/SqlRapper</RepositoryUrl>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
