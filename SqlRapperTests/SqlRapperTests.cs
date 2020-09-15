@@ -168,7 +168,7 @@ namespace SqlRapperTests
                 var parameters = new object[] { row, tableName, cmd };
                 returnedSql = PrivateMethod.InvokePrivateMethodWithReturnType(new SqlDataService("fake", null), "GetInsertableRows", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Instance, types, parameters).ToString();
             }
-            string expectedSql = "INSERT INTO Logs (ApplicationId,Message,StackTrace,ExceptionAsJson,ExceptionMessage) VALUES (@ApplicationId,@Message,@StackTrace,@ExceptionAsJson,@ExceptionMessage)";
+            string expectedSql = "INSERT INTO Logs (ApplicationId,Message,StackTrace,ExceptionAsJson,ExceptionMessage) OUTPUT INSERTED.LogId VALUES (@ApplicationId,@Message,@StackTrace,@ExceptionAsJson,@ExceptionMessage)";
 
             Assert.AreEqual(returnedSql, expectedSql);
         }
@@ -210,6 +210,39 @@ namespace SqlRapperTests
 
             var newLog = db.GetData<Log>("Where Logid = 32");
             Assert.AreEqual(newLog.FirstOrDefault().Message, log.Message);
+            Assert.IsTrue(success);
+        }
+        [TestMethod]
+        public void CanUpdateMultipleRowsToDbQuickly()
+        {
+            var success = true;
+            //this really writes to the db.  So it is disabled.  
+            /*    */
+            Stopwatch sw = new Stopwatch();
+
+            SqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            var log1 = new Log() {
+                LogId = 66,
+                Message = "Test1 Bulk Update ID 66",
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
+            };
+
+            var log2 = new Log()
+            {
+                LogId = 67,
+                Message = "Test2 Bulk Update ID 67",
+                ExceptionMessage = "Fake Exception Message, man. 2k length but it comes in from Max.",
+                ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
+            };
+            var logs = new List<Log>() { log1, log2 };
+            Assert.AreEqual(log1.ApplicationId, 3);
+            Assert.AreEqual(log2.ApplicationId, 3);
+            sw.Start();
+            success = db.BulkUpdateData(logs);
+            sw.Stop();
+            Assert.IsTrue(sw.ElapsedMilliseconds <= 6000);
+            
+
             Assert.IsTrue(success);
         }
         [TestMethod]
