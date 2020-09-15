@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Xml.Serialization;
 
 namespace SqlRapper.Extensions
@@ -83,6 +84,20 @@ namespace SqlRapper.Extensions
                 return "'" + string.Join("','", list) + "'";
             }
             return "";
+        }
+
+        public static bool IsSimple(this Type type)
+        {
+            var typeInfo = type?.GetTypeInfo();
+            if (typeInfo.IsGenericType && typeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                // nullable type, check if the nested type is simple.
+                return IsSimple(typeInfo.GetGenericArguments()[0]);
+            }
+            return typeInfo.IsPrimitive
+              || typeInfo.IsEnum
+              || type.Equals(typeof(string))
+              || type.Equals(typeof(decimal));
         }
     }
 }

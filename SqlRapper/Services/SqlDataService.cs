@@ -1,47 +1,81 @@
-﻿using SqlRapper.CustomAttributes;
+﻿using Newtonsoft.Json;
+using SqlRapper.CustomAttributes;
 using SqlRapper.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
 namespace SqlRapper.Services
 {
+    /// <summary>
+    /// Creates sql commands that function like an ORM.  
+    /// To utilize this like an ORM, pass a specified class into the T objects.  
+    /// If the specified classname + s = tablename, it will automatically find the table, otherwise, pass in a table name.
+    /// Properties will be mapped to columns that share a name with them. 
+    /// During Inserts custom Attributes can be added to the class properties.
+    /// The primary key should always be nullable to allow for inserts using the [PrimaryKey] attribute.
+    /// [PrimaryKey] designates a property as a primary key and it will be automatically generated in the sql.
+    /// [DefaultKey] designates a property that will default in sql during insert if it is null and therefore is not required.  
+    /// </summary>
     public class SqlDataService : ISqlDataService
     {
         #region Fields And Properties
         /// <summary>
         /// For that rare occasion when your DB connection is screwy.
         /// </summary>
-        private IFileLogger _logger;
+        public IFileLogger _logger { get; set; }
         public int CmdTimeOut { get; set; } = 30;
         public string ConnectionString { get; set; }
         #endregion
         #region Constructors
         /// <summary>
-        /// When SqlDataService fails, it needs to report its failure, however, a sql logger may recall the sql data service to write the error, possibly causing another error, causing a loop.
-        /// So, we write to a file.  
+        /// Creates sql commands that function like an ORM.  
+        /// To utilize this like an ORM, pass a specified class into the T objects.  
+        /// If the specified classname + s = tablename, it will automatically find the table, otherwise, pass in a table name.
+        /// Properties will be mapped to columns that share a name with them. 
+        /// During Inserts custom Attributes can be added to the class properties.
+        /// The primary key should always be nullable to allow for inserts using the [PrimaryKey] attribute.
+        /// [PrimaryKey] designates a property as a primary key and it will be automatically generated in the sql.
+        /// [DefaultKey] designates a property that will default in sql during insert if it is null and therefore is not required.  
         /// </summary>
-        /// <param name="logger"></param>
-        public SqlDataService() : this(ConfigurationManager.AppSettings["Sql_Con_String"], new FileLogger())
+        public SqlDataService() : this(ConfigurationManager.AppSettings["Sql_Con_String"])
         {
         }
-
-        public SqlDataService(string connectionString) : this(connectionString, new FileLogger())
-        {
-        }
-
-        public SqlDataService(IFileLogger logger) : this(ConfigurationManager.AppSettings["Sql_Con_String"], logger)
-        {
-        }
-
+        /// <summary>
+        /// Creates sql commands that function like an ORM.  
+        /// To utilize this like an ORM, pass a specified class into the T objects.  
+        /// If the specified classname + s = tablename, it will automatically find the table, otherwise, pass in a table name.
+        /// Properties will be mapped to columns that share a name with them. 
+        /// During Inserts custom Attributes can be added to the class properties.
+        /// The primary key should always be nullable to allow for inserts using the [PrimaryKey] attribute.
+        /// [PrimaryKey] designates a property as a primary key and it will be automatically generated in the sql.
+        /// [DefaultKey] designates a property that will default in sql during insert if it is null and therefore is not required.  
+        /// </summary>
+        /// <param name="connectionString">A connection string to the sql database.</param>
+        /// <param name="logger">When SqlDataService fails, it needs to report its failure, however, a sql logger may recall the sql data service to write the error, possibly causing another error, causing a loop. So, we write to a file.  </param>
         public SqlDataService(string connectionString, IFileLogger logger)
         {
             ConnectionString = connectionString;
             _logger = logger;
+        }
+        /// <summary>
+        /// Creates sql commands that function like an ORM.  
+        /// To utilize this like an ORM, pass a specified class into the T objects.  
+        /// If the specified classname + s = tablename, it will automatically find the table, otherwise, pass in a table name.
+        /// Properties will be mapped to columns that share a name with them. 
+        /// During Inserts custom Attributes can be added to the class properties.
+        /// The primary key should always be nullable to allow for inserts using the [PrimaryKey] attribute.
+        /// [PrimaryKey] designates a property as a primary key and it will be automatically generated in the sql.
+        /// [DefaultKey] designates a property that will default in sql during insert if it is null and therefore is not required.  
+        /// </summary>
+        /// <param name="connectionString">A connection string to the sql database.</param>
+        public SqlDataService(string connectionString) : this(connectionString, null)
+        {
         }
         #endregion
         #region Public Methods
@@ -57,7 +91,7 @@ namespace SqlRapper.Services
         /// <param name="commandType"></param>
         /// <param name="sqlParameterCollection"></param>
         /// <returns>a specified object T</returns>
-        public string GetDataJson(string SQL, CommandType commandType, List<SqlParameter> sqlParameterCollection = null) 
+        public string GetDataJson(string SQL, CommandType commandType, List<SqlParameter> sqlParameterCollection = null)
         {
             var results = new List<Dictionary<string, object>>();
             if (string.IsNullOrEmpty(SQL))
@@ -93,12 +127,15 @@ namespace SqlRapper.Services
                         {
                             con.Close();
                         }
-                        _logger.Log("Failed to Read Sql.", ex);
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to Read Sql.", ex);
+                        }
                         throw ex;
                     }
                 }
             }
-            return results.ConvertToJson();
+            return JsonConvert.SerializeObject(results, Formatting.Indented);
         }
 
         /// <summary>
@@ -106,11 +143,11 @@ namespace SqlRapper.Services
         /// Gets data from a table matching T + s or a specified table name.  The properties map to the table columns.  
         /// Custom sql can be put into the call through the whereClause, this allows for most customization.
         /// Ways to use: 
-        /// 1.  GetData<tableNameSingular>() automatically selects all records in that table.
-        /// 2.  GetData<anyclass>(tableName: sqlTableName) populates a table to a specified class.
-        /// 3.  GetData<tableNameSingular>("Where x = 1") select * data from the tableNameSingulars table where X = 1.  
+        /// 1.  GetData&lt;tableNameSingular&gt;() automatically selects all records in that table.
+        /// 2.  GetData&lt;anyclass&gt;(tableName: sqlTableName) populates a table to a specified class.
+        /// 3.  GetData&lt;tableNameSingular&gt;("Where x = 1") select * data from the tableNameSingulars table where X = 1.  
         /// Pretty much, this can be a shortcut to only write a where clause or Select * from a table.  You should use 
-        /// GetData<T>(sql, commandType.Text, sqlParameterCollection) for more difficult or dangerous queries.
+        /// GetData&lt;T&gt;(sql, commandType.Text, sqlParameterCollection) for more difficult or dangerous queries.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="whereClause"></param>
@@ -159,14 +196,17 @@ namespace SqlRapper.Services
                             returnList.Add(thisRow);
                         }
                     }
-                    catch (Exception ex) 
+                    catch (Exception ex)
                     {
                         if (con.State != ConnectionState.Closed)
                         {
                             con.Close();
                         }
-                        _logger.Log("Failed to Read Sql.", ex);
-                        throw ex; 
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to Read Sql.", ex);
+                        }
+                        throw ex;
                     }
                 }
             }
@@ -174,6 +214,7 @@ namespace SqlRapper.Services
         }
 
         /// <summary>
+        /// This method can accept simple objects.  
         /// WARNING: THE SQL string here can open this statement to SQL Injection, use this only with known inside information.
         /// USE: $@"SprocName" and CommandType.StoredProcedure to use a stored procedure.
         /// USE "Parameterized SQL" 
@@ -187,9 +228,17 @@ namespace SqlRapper.Services
         /// <returns>a specified object T</returns>
         public List<T> GetData<T>(string SQL, CommandType commandType, List<SqlParameter> sqlParameterCollection = null)
         {
-            var objProps = Activator.CreateInstance<T>().GetType().GetProperties();
+            var objType = Activator.CreateInstance<T>().GetType();
+            if (objType.IsSimple())
+            {
+                return GetSimpleObject<T>(SQL, commandType, sqlParameterCollection);
+            }
+
             var returnList = new List<T>();
-            if (string.IsNullOrEmpty(SQL)) {
+            var objProps = objType.GetProperties();
+
+            if (string.IsNullOrEmpty(SQL))
+            {
                 throw new Exception("SQL statement was null or empty");
             }
             using (SqlConnection con = new SqlConnection(ConnectionString))
@@ -236,7 +285,10 @@ namespace SqlRapper.Services
                         {
                             con.Close();
                         }
-                        _logger.Log("Failed to Read Sql.", ex);
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to Read Sql.", ex);
+                        }
                         throw ex;
                     }
                 }
@@ -247,10 +299,11 @@ namespace SqlRapper.Services
         /// <summary>
         /// Works with Simple Sql objects that mock tables.  
         /// Protected from SQL Injection using parameterized sql.
+        /// Populates a T class.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">A hand built class.</typeparam>
         /// <param name="row"></param>
-        /// <param name="tableName"></param>
+        /// <param name="tableName">A table name to match the class, if null adds an s to classname.</param>
         /// <returns>bool success</returns>
         public bool InsertData<T>(T row, string tableName = null)
         {
@@ -267,7 +320,7 @@ namespace SqlRapper.Services
                     try
                     {
                         con.Open();
-                        inserted = cmd.ExecuteNonQuery();
+                        inserted = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                     catch (Exception ex)
                     {
@@ -277,13 +330,17 @@ namespace SqlRapper.Services
                         }
                         //well logging to sql might not work... we could try... but could cause infinite loop if it fails.
                         //So Lets write to a local file.
-                        _logger.Log($"Failed to Write to Sql. {row.ToJson()}", ex);
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to Write to Sql.", ex);
+                        }
                         throw ex;
                     }
                 }
             }
             if (inserted > 0)
             {
+                SetPrimaryColumnValue(row, inserted);
                 return true;
             }
             return false;
@@ -295,11 +352,11 @@ namespace SqlRapper.Services
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="rows">A list of rows to insert</param>
-        /// <param name="tableName"></param>
+        /// <param name="tableName">A table name to match the class, if null adds an s to classname.</param>
         /// <returns>bool success</returns>
         public bool BulkInsertData<T>(List<T> rows, string tableName = null)
         {
-            var template = Activator.CreateInstance<T>();
+            var template = rows.FirstOrDefault();
             string tn = tableName ?? template.GetType().Name + "s";
             int inserted = 0;
             using (SqlConnection con = new SqlConnection(ConnectionString))
@@ -317,7 +374,6 @@ namespace SqlRapper.Services
                         {
                             if (rowNum == 0)
                             {
-                                sbc.ColumnMappings.Add(col.Name, col.Name);
                                 dt.Columns.Add(new DataColumn(col.Name));
                             }
                             var attributes = GetAttributes(row, col);
@@ -350,7 +406,10 @@ namespace SqlRapper.Services
                         }
                         //well logging to sql might not work... we could try... but could cause infinite loop if it fails.
                         //So Lets write to a local file.
-                        _logger.Log($"Failed to Bulk Copy to Sql:  {rows.ToCSV()}", ex);
+                        if (_logger != null)
+                        {
+                            _logger.Log($"Failed to Bulk Copy to Sql:  {rows.ToCSV()}", ex);
+                        }
                         throw ex;
                     }
                 }
@@ -361,7 +420,18 @@ namespace SqlRapper.Services
             }
             return false;
         }
-
+        /// <summary>
+        /// Ignores the defaultkey attribute. 
+        /// Creates a SqlCommand to update a row in a table using the class provided.
+        /// If no whereClause is given, the where clause becomes the primary key attribute.  
+        /// If no primary key and no where clause exists, throws an exception.
+        /// You cannot use both a where clause and a primary key attribute.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="row"></param>
+        /// <param name="whereClause">Dangerous.</param>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
         public bool UpdateData<T>(T row, string whereClause = null, string tableName = null)
         {
             string tn = tableName ?? row.GetType().Name + "s";
@@ -387,7 +457,10 @@ namespace SqlRapper.Services
                         }
                         //well logging to sql might not work... we could try... but could cause infinite loop if it fails.
                         //So Lets write to a local file.
-                        _logger.Log("Failed to Write to Sql.", ex);
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to update to Sql.", ex);
+                        }
                         throw ex;
                     }
                 }
@@ -399,8 +472,151 @@ namespace SqlRapper.Services
             return false;
         }
 
+
+        /// <summary>
+        /// SqlBulkCopy is allegedly protected from Sql Injection.
+        /// Updates a list of simple sql objects that mock tables.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="rows">A list of rows to insert</param>
+        /// <param name="tableName">a Table name if your class isn't your table name minus s.</param>
+        /// <returns>bool success</returns>
+        public bool BulkUpdateData<T>(List<T> rows, string tableName = null)
+        {
+            var template = rows.FirstOrDefault();
+            string tn = tableName ?? template.GetType().Name + "s";
+            int updated = 0;
+            using (SqlConnection con = new SqlConnection(ConnectionString))
+            {
+                using (SqlCommand command = new SqlCommand("", con))
+                {
+                    using (SqlBulkCopy sbc = new SqlBulkCopy(con))
+                    {
+                        var dt = new DataTable();
+                        var columns = GetColumns(template);
+                        var colNames = new List<string>();
+                        string keyName = "";
+                        var setStatement = new StringBuilder();
+                        int rowNum = 0;
+                        foreach (var row in rows)
+                        {
+                            dt.Rows.Add();
+                            int colNum = 0;
+                            foreach (var col in columns)
+                            {
+                                var attributes = GetAttributes(row, col);
+                                bool isPrimary = IsPrimaryKey(attributes);
+                                var value = row.GetType().GetProperty(col.Name).GetValue(row);
+
+                                if (rowNum == 0)
+                                {
+                                    colNames.Add($"{col.Name} {GetSqlDataType(col.PropertyType, isPrimary)}");
+                                    dt.Columns.Add(new DataColumn(col.Name, Nullable.GetUnderlyingType(col.PropertyType) ?? col.PropertyType));
+                                    if (!isPrimary)
+                                    {
+                                        setStatement.Append($" ME.{col.Name} = T.{col.Name},");
+                                    }
+
+                                }
+                                if (isPrimary)
+                                {
+                                    keyName = col.Name;
+                                    if (value == null)
+                                    {
+                                        throw new Exception("Trying to update a row whose primary key is null; use insert instead.");
+                                    }
+                                }
+                                dt.Rows[rowNum][colNum] = value ?? DBNull.Value;
+                                colNum++;
+                            }
+                            rowNum++;
+                        }
+                        setStatement.Length--;
+                        try
+                        {
+                            con.Open();
+
+                            command.CommandText = $"CREATE TABLE [dbo].[#TmpTable]({String.Join(",", colNames)})";
+                            //command.CommandTimeout = CmdTimeOut;
+                            command.ExecuteNonQuery();
+
+                            sbc.DestinationTableName = "[dbo].[#TmpTable]";
+                            sbc.BulkCopyTimeout = CmdTimeOut * 3;
+                            sbc.WriteToServer(dt);
+                            sbc.Close();
+
+                            command.CommandTimeout = CmdTimeOut * 3;
+                            command.CommandText = $"UPDATE ME SET {setStatement} FROM {tn} as ME INNER JOIN #TmpTable AS T on ME.{keyName} = T.{keyName}; DROP TABLE #TmpTable;";
+                            updated = command.ExecuteNonQuery();
+                        }
+                        catch (Exception ex)
+                        {
+                            if (con.State != ConnectionState.Closed)
+                            {
+                                sbc.Close();
+                                con.Close();
+                            }
+                            //well logging to sql might not work... we could try... but no.
+                            //So Lets write to a local file.
+                            _logger.Log($"Failed to Bulk Update to Sql:  {rows.ToCSV()}", ex);
+                            throw ex;
+                        }
+                    }
+                }
+            }
+            return (updated > 0) ? true : false;
+        }
+
         #endregion
         #region Private methods
+
+        private List<T> GetSimpleObject<T>(string SQL, CommandType commandType, List<SqlParameter> sqlParameterCollection)
+        {
+            var returnList = new List<T>();
+            using (SqlConnection con = new SqlConnection(ConnectionString))
+            {
+                using (SqlCommand cmd = new SqlCommand(SQL, con))
+                {
+                    cmd.CommandType = commandType;
+                    cmd.Parameters.Clear();
+                    cmd.CommandTimeout = CmdTimeOut;
+                    try
+                    {
+                        if (sqlParameterCollection.NullSafeAny())
+                        {
+                            cmd.Parameters.AddRange(sqlParameterCollection.ToArray());
+                        }
+
+                        con.Open();
+                        SqlDataReader reader = cmd.ExecuteReader();
+                        while (reader.Read())
+                        {
+                            var thisRow = Activator.CreateInstance<T>();
+                            var val = reader.GetValue(0);
+                            if (val != DBNull.Value)
+                            {
+                                thisRow = (T)val;
+                            }
+                            returnList.Add(thisRow);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (con.State != ConnectionState.Closed)
+                        {
+                            con.Close();
+                        }
+                        if (_logger != null)
+                        {
+                            _logger.Log("Failed to Read Sql.", ex);
+                        }
+                        throw ex;
+                    }
+                }
+            }
+            return returnList;
+        }
+
         private static StringBuilder GetUpdateableRows<T>(T row, string table, SqlCommand cmd, string whereClause = null)
         {
             StringBuilder sb1 = new StringBuilder();
@@ -440,17 +656,38 @@ namespace SqlRapper.Services
             }
             return sb1;
         }
+        private static void SetPrimaryColumnValue<T>(T row, int idVal)
+        {
+            var columns = GetColumns(row);
+            foreach (var col in columns)
+            {
+                var attributes = GetAttributes(row, col);
+                bool isThis = IsPrimaryKey(attributes);
+                if (isThis)
+                {
+                    row.GetType().GetProperty(col.Name).SetValue(row, idVal);
+                    break;
+                }
+            }
+        }
+
         private static StringBuilder GetInsertableRows<T>(T row, string table, SqlCommand cmd)
         {
             StringBuilder sb1 = new StringBuilder();
             sb1.Append($"INSERT INTO {table} (");
             StringBuilder sb2 = new StringBuilder();
             sb2.Append($" VALUES (");
+            string primColName = "";
             var columns = GetColumns(row);
             foreach (var col in columns)
             {
                 var attributes = GetAttributes(row, col);
                 bool skip = IsPrimaryKey(attributes);
+                if (skip)
+                {
+                    primColName = col.Name;
+                    continue;
+                }
                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
                 skip = skip ? skip : IsNullDefaultKey(attributes, value);
                 if (skip)
@@ -466,6 +703,10 @@ namespace SqlRapper.Services
             sb2.Length--;
             sb1.Append(")");
             sb2.Append(")");
+            if (!string.IsNullOrWhiteSpace(primColName))
+            {
+                sb1.Append($" OUTPUT INSERTED.{primColName}");
+            }
             sb1.Append(sb2);
             return sb1;
         }
@@ -514,6 +755,45 @@ namespace SqlRapper.Services
                 result.Add(col, reader[col]);
             return result;
         }
+
+        private string GetSqlDataType(Type type, bool isPrimary = false)
+        {
+            var sqlType = new StringBuilder();
+            var isNullable = false;
+            if (Nullable.GetUnderlyingType(type) != null)
+            {
+                isNullable = true;
+                type = Nullable.GetUnderlyingType(type);
+            }
+            switch (Type.GetTypeCode(type))
+            {
+                case TypeCode.String:
+                    isNullable = true;
+                    sqlType.Append("nvarchar(MAX)");
+                    break;
+                case TypeCode.Int32:
+                case TypeCode.Int64:
+                case TypeCode.Int16:
+                    sqlType.Append("int");
+                    break;
+                case TypeCode.Boolean:
+                    sqlType.Append("bit");
+                    break;
+                case TypeCode.DateTime:
+                    sqlType.Append("datetime");
+                    break;
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                    sqlType.Append("decimal");
+                    break;
+            }
+            if (!isNullable || isPrimary)
+            {
+                sqlType.Append(" NOT NULL");
+            }
+            return sqlType.ToString();
+        }
+
         #endregion
     }
 }
