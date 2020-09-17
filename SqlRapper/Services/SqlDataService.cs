@@ -228,6 +228,11 @@ namespace SqlRapper.Services
         /// <returns>a specified object T</returns>
         public List<T> GetData<T>(string SQL, CommandType commandType, List<SqlParameter> sqlParameterCollection = null)
         {
+            if (typeof(T) == typeof(string))
+            {
+                return GetSimpleObject<T>(SQL, commandType, sqlParameterCollection);
+            }
+
             var objType = Activator.CreateInstance<T>().GetType();
             if (objType.IsSimple())
             {
@@ -589,10 +594,23 @@ namespace SqlRapper.Services
 
                         con.Open();
                         SqlDataReader reader = cmd.ExecuteReader();
+                        var isString = (typeof(T) == typeof(string));
                         while (reader.Read())
                         {
-                            var thisRow = Activator.CreateInstance<T>();
                             var val = reader.GetValue(0);
+                            if(isString)
+                            {
+                                if (val == DBNull.Value)
+                                {
+                                    returnList.Add(default);
+                                }
+                                else
+                                {
+                                    returnList.Add((T)val);
+                                }
+                                continue;
+                            }
+                            var thisRow = Activator.CreateInstance<T>();
                             if (val != DBNull.Value)
                             {
                                 thisRow = (T)val;

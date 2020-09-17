@@ -110,6 +110,29 @@ namespace SqlRapperTests
              
             Assert.IsTrue(success);
         }
+
+        [TestMethod]
+        public void CanGetDbInfoWithString()
+        {
+            var success = true;
+            //this really reads from the db.  It is disabled.  
+
+            Stopwatch sw = new Stopwatch();
+
+            ISqlDataService db = new SqlDataService(ConfigurationManager.AppSettings["sql_Con_String"], new FileLogger());
+            /**/
+            sw.Start();
+            var sprocs = db.GetData<string>($@"Select Distinct ExceptionAsJson
+                                                                From [MyAwesome].[dbo].[Logs]
+                                                                WHERE ApplicationId = 3", System.Data.CommandType.Text);
+            sw.Stop();
+
+            Assert.IsTrue(sw.ElapsedMilliseconds <= 2000);
+
+            Assert.IsTrue(success);
+        }
+
+
         [TestMethod]
         public void AbleToGetColumnsFromObject()
         {
