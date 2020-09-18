@@ -3,6 +3,8 @@ A lightweight ORM alternative that supports bulk inserts and Sprocs
 
 Check out the Tests folder to see how to use this project.  
 
+LICENSE INFO:  MIT Copyright 2020
+
 
 READ:
 1. Create a class that represents the model you want HOWEVER:
