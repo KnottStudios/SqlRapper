@@ -380,6 +380,8 @@ namespace SqlRapper.Services
                             if (rowNum == 0)
                             {
                                 dt.Columns.Add(new DataColumn(col.Name));
+                                SqlBulkCopyColumnMapping map = new SqlBulkCopyColumnMapping(col.Name, col.Name);
+                                sbc.ColumnMappings.Add(map);
                             }
                             var attributes = GetAttributes(row, col);
                             bool skip = IsPrimaryKey(attributes);

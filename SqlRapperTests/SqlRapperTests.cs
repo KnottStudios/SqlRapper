@@ -124,7 +124,7 @@ namespace SqlRapperTests
             sw.Start();
             var sprocs = db.GetData<string>($@"Select Distinct ExceptionAsJson
                                                                 From [MyAwesome].[dbo].[Logs]
-                                                                WHERE ApplicationId = 3", System.Data.CommandType.Text);
+                                                                WHERE ApplicationId = 2", System.Data.CommandType.Text);
             sw.Stop();
 
             Assert.IsTrue(sw.ElapsedMilliseconds <= 2000);
@@ -258,8 +258,8 @@ namespace SqlRapperTests
                 ApplicationId = int.Parse(ConfigurationManager.AppSettings["ApplicationId"])
             };
             var logs = new List<Log>() { log1, log2 };
-            Assert.AreEqual(log1.ApplicationId, 3);
-            Assert.AreEqual(log2.ApplicationId, 3);
+            Assert.AreEqual(log1.ApplicationId, 2);
+            Assert.AreEqual(log2.ApplicationId, 2);
             sw.Start();
             success = db.BulkUpdateData(logs);
             sw.Stop();
