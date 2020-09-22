@@ -3,6 +3,8 @@ A lightweight ORM alternative that supports bulk inserts and Sprocs
 
 Check out the Tests folder to see how to use this project.  
 
+LICENSE INFO:  MIT Copyright 2020
+
 
 READ:
 1. Create a class that represents the model you want HOWEVER:
@@ -11,10 +13,10 @@ READ:
 4. If you class name matches the table name minus the 's' then the service will write your table name appropriately, otherwise pass it in.  Log becomes the Logs table.
 
 READ Example using a Log object:
-db.GetData<Log>("WHERE ApplicationId = 2", "Logs");
+db.GetData&lt;Log&gt;("WHERE ApplicationId = 2", "Logs");
 
 or if we wanted all the items:
-db.GetData<Log>();
+db.GetData&lt;Log&gt;();
 
 
 INSERT:
@@ -37,6 +39,9 @@ UPDATE:
 
 UPDATE example using a Log object with a primary key:
 db.UpdateData(log);
+
+UPDATE example for a log list.  It uses the primarykey to determine which item to update; the primary key is the where clause.
+db.BulkUpdateData(logs);
 
 or with a where clause:
 db.UpdateData(log, "Where LogId = 32")
