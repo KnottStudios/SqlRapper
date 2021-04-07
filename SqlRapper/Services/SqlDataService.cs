@@ -377,13 +377,17 @@ namespace SqlRapper.Services
                         int colNum = 0;
                         foreach (var col in columns)
                         {
+                            var attributes = GetAttributes(row, col);
+                            if (IsIgnoreDefaultKey(attributes))
+                            {
+                                continue;
+                            }
                             if (rowNum == 0)
                             {
                                 dt.Columns.Add(new DataColumn(col.Name));
                                 SqlBulkCopyColumnMapping map = new SqlBulkCopyColumnMapping(col.Name, col.Name);
                                 sbc.ColumnMappings.Add(map);
                             }
-                            var attributes = GetAttributes(row, col);
                             bool skip = IsPrimaryKey(attributes);
                             var value = row.GetType().GetProperty(col.Name).GetValue(row);
                             skip = skip ? skip : IsNullDefaultKey(attributes, value);
@@ -648,6 +652,10 @@ namespace SqlRapper.Services
             {
                 var attributes = GetAttributes(row, col);
                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
+                if (IsIgnoreDefaultKey(attributes))
+                {
+                    continue;
+                }
                 if (IsPrimaryKey(attributes))
                 {
                     primaryKey = col.Name;
@@ -702,15 +710,17 @@ namespace SqlRapper.Services
             foreach (var col in columns)
             {
                 var attributes = GetAttributes(row, col);
-                bool skip = IsPrimaryKey(attributes);
-                if (skip)
+                if (IsIgnoreDefaultKey(attributes)) 
+                {
+                    continue;    
+                }
+                if (IsPrimaryKey(attributes))
                 {
                     primColName = col.Name;
                     continue;
                 }
                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
-                skip = skip ? skip : IsNullDefaultKey(attributes, value);
-                if (skip)
+                if (IsNullDefaultKey(attributes, value))
                 {
                     continue;
                 }
@@ -747,6 +757,19 @@ namespace SqlRapper.Services
             foreach (var attr in attributes)
             {
                 if (attr.GetType() == typeof(PrimaryKeyAttribute))
+                {
+                    skip = true;
+                }
+            }
+
+            return skip;
+        }
+        private static bool IsIgnoreDefaultKey(object[] attributes)
+        {
+            bool skip = false;
+            foreach (var attr in attributes)
+            {
+                if (attr.GetType() == typeof(IgnoreKeyAttribute))
                 {
                     skip = true;
                 }
