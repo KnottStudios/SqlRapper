@@ -516,6 +516,10 @@ namespace SqlRapper.Services
                             foreach (var col in columns)
                             {
                                 var attributes = GetAttributes(row, col);
+                                if (IsIgnoreDefaultKey(attributes))
+                                {
+                                    continue;
+                                }
                                 bool isPrimary = IsPrimaryKey(attributes);
                                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
 
@@ -828,6 +832,9 @@ namespace SqlRapper.Services
                 case TypeCode.Decimal:
                 case TypeCode.Double:
                     sqlType.Append("decimal");
+                    break;
+                case TypeCode.Byte:
+                    sqlType.Append("varbinary(max)");
                     break;
             }
             if (!isNullable || isPrimary)
