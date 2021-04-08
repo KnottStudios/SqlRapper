@@ -10,8 +10,8 @@
     <RepositoryUrl>https://github.com/KnottStudios/SqlRapper</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.0.5</Version>
-    <PackageReleaseNotes>Adding support for byte[].</PackageReleaseNotes>
+    <Version>1.0.6</Version>
+    <PackageReleaseNotes>Adding support for byte?[], correcting errors in 1.0.5</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
