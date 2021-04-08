@@ -85,6 +85,7 @@ namespace SqlRapper.Services
         /// <summary>
         /// SqlBulkCopy is allegedly protected from Sql Injection.
         /// Inserts a list of simple sql objects that mock tables.
+        /// Be aware that a data table is used and class properties are Case Sensitive.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="rows">A list of rows to insert</param>

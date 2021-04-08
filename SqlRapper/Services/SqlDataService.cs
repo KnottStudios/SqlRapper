@@ -185,7 +185,19 @@ namespace SqlRapper.Services
                                     var val = reader[prop.Name];
                                     if (val != DBNull.Value)
                                     {
-                                        prop.SetValue(thisRow, val);
+                                        if (prop.PropertyType.ToString() == "System.Nullable`1[System.Byte][]" && val.GetType().Name == "Byte[]")
+                                        {
+                                            var nullBytes = Array.ConvertAll<byte, byte?>((byte[])val,
+                                                delegate (byte b)
+                                                {
+                                                    return b;
+                                                });
+
+                                            prop.SetValue(thisRow, nullBytes);
+                                        }
+                                        else {
+                                            prop.SetValue(thisRow, val);
+                                        }
                                     }
                                     else
                                     {
@@ -354,6 +366,7 @@ namespace SqlRapper.Services
         /// <summary>
         /// SqlBulkCopy is allegedly protected from Sql Injection.
         /// Inserts a list of simple sql objects that mock tables.
+        /// Be aware that a data table is used and class properties are Case Sensitive.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="rows">A list of rows to insert</param>
@@ -382,9 +395,17 @@ namespace SqlRapper.Services
                             {
                                 continue;
                             }
+                            var isNullableBytes = row.GetType().GetProperty(col.Name).PropertyType.ToString() == "System.Nullable`1[System.Byte][]";
                             if (rowNum == 0)
                             {
-                                dt.Columns.Add(new DataColumn(col.Name));
+                                if (isNullableBytes)
+                                {
+                                    dt.Columns.Add(new DataColumn(col.Name, typeof(Byte[])));
+                                }
+                                else
+                                {
+                                    dt.Columns.Add(new DataColumn(col.Name));
+                                }
                                 SqlBulkCopyColumnMapping map = new SqlBulkCopyColumnMapping(col.Name, col.Name);
                                 sbc.ColumnMappings.Add(map);
                             }
@@ -397,7 +418,15 @@ namespace SqlRapper.Services
                                 colNum++;
                                 continue;
                             }
-                            dt.Rows[rowNum][colNum] = value ?? DBNull.Value;
+                            if (isNullableBytes && value != null)
+                            {
+                                var nullBytes = ((byte?[])value).Select(x => x.Value).ToArray();
+                                dt.Rows[rowNum][colNum] = nullBytes;
+                            }
+                            else
+                            {
+                                dt.Rows[rowNum][colNum] = value ?? DBNull.Value;
+                            }
                             colNum++;
                         }
                         rowNum++;
@@ -521,12 +550,20 @@ namespace SqlRapper.Services
                                     continue;
                                 }
                                 bool isPrimary = IsPrimaryKey(attributes);
+                                var isNullableBytes = row.GetType().GetProperty(col.Name).PropertyType.ToString() == "System.Nullable`1[System.Byte][]";
                                 var value = row.GetType().GetProperty(col.Name).GetValue(row);
 
                                 if (rowNum == 0)
                                 {
                                     colNames.Add($"{col.Name} {GetSqlDataType(col.PropertyType, isPrimary)}");
-                                    dt.Columns.Add(new DataColumn(col.Name, Nullable.GetUnderlyingType(col.PropertyType) ?? col.PropertyType));
+                                    var underlyingType = Nullable.GetUnderlyingType(col.PropertyType);
+                                    var type = col.PropertyType;
+                                    if (isNullableBytes)
+                                    {
+                                        var x = new byte[0];
+                                        type = x.GetType();
+                                    }
+                                    dt.Columns.Add(new DataColumn(col.Name, Nullable.GetUnderlyingType(col.PropertyType) ?? type));
                                     if (!isPrimary)
                                     {
                                         setStatement.Append($" ME.{col.Name} = T.{col.Name},");
@@ -541,7 +578,14 @@ namespace SqlRapper.Services
                                         throw new Exception("Trying to update a row whose primary key is null; use insert instead.");
                                     }
                                 }
-                                dt.Rows[rowNum][colNum] = value ?? DBNull.Value;
+                                if (isNullableBytes && value != null)
+                                {
+                                    var nullBytes = ((byte?[])value).Select(x => x.Value).ToArray();
+                                    dt.Rows[rowNum][colNum] = nullBytes;
+                                }
+                                else {
+                                    dt.Rows[rowNum][colNum] = value ?? DBNull.Value;
+                                }
                                 colNum++;
                             }
                             rowNum++;
@@ -666,7 +710,12 @@ namespace SqlRapper.Services
                     primaryValue = value;
                     continue;
                 }
-                if (value != null)
+                if (row.GetType().GetProperty(col.Name).PropertyType.ToString() == "System.Nullable`1[System.Byte][]" && value != null)
+                {
+                    var nullBytes = ((byte?[])value).Select(x => x.Value).ToArray();
+                    cmd.Parameters.Add($"@{col.Name}", SqlDbType.VarBinary, -1).Value = nullBytes;
+                }
+                else if (value != null)
                 {
                     sb1.Append($"{col.Name} = @{col.Name},");
                     cmd.Parameters.AddWithValue($"@{col.Name}", value);
@@ -729,8 +778,21 @@ namespace SqlRapper.Services
                     continue;
                 }
                 sb1.Append($"{col.Name},");
-                value = value ?? DBNull.Value;
-                cmd.Parameters.AddWithValue($"@{col.Name}", value);
+                if (row.GetType().GetProperty(col.Name).PropertyType.ToString() == "System.Nullable`1[System.Byte][]")
+                {
+                    if (value != null)
+                    {
+                        var nullBytes = ((byte?[])value).Select(x => x.Value).ToArray();
+                        cmd.Parameters.Add($"@{col.Name}", SqlDbType.VarBinary, -1).Value = nullBytes;
+                    }
+                    else {
+                        cmd.Parameters.Add($"@{col.Name}", SqlDbType.VarBinary, -1).Value = DBNull.Value;
+                    }
+                }
+                else {
+                    value = value ?? DBNull.Value;
+                    cmd.Parameters.AddWithValue($"@{col.Name}", value);
+                }          
                 sb2.Append($"@{col.Name},");
             }
             sb1.Length--;
@@ -812,6 +874,7 @@ namespace SqlRapper.Services
                 isNullable = true;
                 type = Nullable.GetUnderlyingType(type);
             }
+            var isNullableBytes = type.Name == "Nullable`1[]";
             switch (Type.GetTypeCode(type))
             {
                 case TypeCode.String:
@@ -836,8 +899,13 @@ namespace SqlRapper.Services
                 case TypeCode.Byte:
                     sqlType.Append("varbinary(max)");
                     break;
+                case TypeCode.Object:
+                    if (isNullableBytes) {
+                        sqlType.Append("varbinary(max)");
+                    }
+                    break;
             }
-            if (!isNullable || isPrimary)
+            if ((!isNullable || isPrimary) && !isNullableBytes)
             {
                 sqlType.Append(" NOT NULL");
             }
